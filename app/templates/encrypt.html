@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}RSA — Шифрование{% endblock %}
+{% block content %}
+<h2>Шифрование</h2>
+
+<form method="post" action="/encrypt">
+  <label>Метод:
+    <select name="method" required>
+      <option value="rsa" selected>RSA</option>
+    </select>
+  </label><br>
+
+  <label>Текст:</label><br>
+  <textarea name="text" rows="5" cols="60" required></textarea><br>
+
+  <button type="submit">Зашифровать</button>
+</form>
+
+{% if result %}
+  <hr>
+  {% if result.error %}
+    <p style="color:#b00020"><b>Ошибка:</b> {{result.error}}</p>
+  {% elif result.encrypted_hex %}
+    <p><b>Шифртекст (hex):</b></p>
+    <pre style="white-space:pre-wrap;word-break:break-all;">{{result.encrypted_hex}}</pre>
+  {% endif %}
+{% endif %}
+{% endblock %}
