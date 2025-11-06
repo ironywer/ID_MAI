@@ -9,19 +9,21 @@ def modinv(a, m):
 
 
 def rsa_keygen(bits=65536, e=65537, rounds=64):
-    p = gen_big_simple(bits // 2, rounds)
-    q = gen_big_simple(bits // 2, rounds)
+    half = bits // 2
+    while True:
+        p = int(gen_big_simple(half, rounds))
+        if math.gcd(e, p - 1) == 1:
+            break
+    while True:
+        q = int(gen_big_simple(half, rounds))
+        if q != p and math.gcd(e, q - 1) == 1:
+            break
+
 
     n = p * q
 
-    phi = (p - 1) * (q - 1)
-
-    while math.gcd(e, phi) != 1 or q==p:  # Проверка, что числа взаимно простые
-        p = gen_big_simple(bits // 2, rounds)
-        q = gen_big_simple(bits // 2, rounds)
-        n = p * q
-        phi = (p - 1) * (q - 1)
-    d = modinv(e, phi)
+    lam = gmpy2.lcm(p - 1, q - 1) # Находим наименьшее общее кратное, вместо взаимно простых чисел
+    d = modinv(e, lam)
 
     # Для ускорения расшифровки вычислим CRT параметры
     dp = d % (p - 1)

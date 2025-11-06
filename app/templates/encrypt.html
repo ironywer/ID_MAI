@@ -24,5 +24,15 @@
     <p><b>Шифртекст (hex):</b></p>
     <pre style="white-space:pre-wrap;word-break:break-all;">{{result.encrypted_hex}}</pre>
   {% endif %}
+  {% if result.public_key %}
+  <h3>Публичный ключ</h3>
+  <pre style="white-space:pre-wrap;word-break:break-all;"><b>n:</b> {{ result.public_key.n }}</pre>
+  <p><b>e:</b> {{ result.public_key.e }}</p>
+  {% endif %}
+  {% if result.pdf_link %}
+      <a href="{{ result.pdf_link }}" download>
+          <button>Скачать PDF</button>
+      </a>
+  {% endif %}
 {% endif %}
 {% endblock %}

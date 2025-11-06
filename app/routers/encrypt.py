@@ -1,8 +1,11 @@
+import uuid
+
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.crypto.RSA import rsa_keygen, rsa_encrypt
+from app.utils.generators import make_pdf
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -19,21 +22,39 @@ def encrypt_action(
     method: str = Form(...),
     text: str = Form(...)
 ):
-    result_hex = None
-    error = None
-
+    result = {}
     try:
         if method == "rsa":
-            keys = rsa_keygen(bits=4096)                       # приватный ключ (содержит n,e,d,p,q,dp,dq,qinv)
-            pub = {"n": keys["n"], "e": keys["e"]}    # публичная часть
-            ct = rsa_encrypt(pub, text.encode("utf-8"))  # bytes
-            result_hex = ct.hex()
+            keys = rsa_keygen(bits=4096)
+
+            pub = {"n": keys["n"], "e": keys["e"]}
+
+            ct = rsa_encrypt(pub, text.encode("utf-8"))
+
+            encrypted_hex = ct.hex()
+            filename = f"{uuid.uuid4()}.pdf"
+            filepath = f"static/results/{filename}"
+            make_pdf(
+                filepath=filepath,
+                original=text,
+                encrypted=encrypted_hex,
+                public_key={"n": hex(pub["n"]), "e": pub["e"]}
+            )
+            result["pdf_link"] = f"/static/results/{filename}"
+            result["encrypted_hex"] = encrypted_hex
+
+            result["public_key"] = {
+                "n": hex(keys["n"]),
+                "e": keys["e"],
+            }
+
         else:
-            error = "Неизвестный метод"
+            result["error"] = "Неизвестный метод"
+
     except Exception as ex:
-        error = f"{type(ex).__name__}: {ex}"
+        result["error"] = f"{type(ex).__name__}: {ex}"
 
     return templates.TemplateResponse(
         "encrypt.html",
-        {"request": request, "result": {"encrypted_hex": result_hex, "error": error}}
+        {"request": request, "result": result}
     )
