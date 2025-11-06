@@ -45,8 +45,8 @@ def rsa_decrypt_int(c: int, priv) -> int:
     n, p, q, dp, dq, qinv = priv["n"], priv["p"], priv["q"], priv["dp"], priv["dq"], priv["qinv"]
     if not (0 <= c < n):
         raise ValueError("ciphertext out of range")
-    m1 = pow(c % p, dp, p)
-    m2 = pow(c % q, dq, q)
+    m1 = pow(c, dp, p)
+    m2 = pow(c, dq, q)
     h  = (qinv * (m1 - m2)) % p
     m  = m2 + h * q
     return m

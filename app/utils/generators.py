@@ -21,7 +21,7 @@ def gen_big_simple(bits: int, rounds: int) -> int:
         big_simple = gmpy2.next_prime(big) # Ускоряет поиск
         if (big_simple.bit_length() == bits and
                 gmpy2.is_prime(big_simple, rounds) > 0):
-            return big
+            return big_simple
 
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
