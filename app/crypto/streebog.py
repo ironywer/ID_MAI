@@ -65,8 +65,9 @@ def xor512(a: bytes, b: bytes) -> bytes:
 
 
 def add512(a: bytes, b: bytes) -> bytes:
-    x = int.from_bytes(a, 'big') + int.from_bytes(b, 'big')
-    return (x & ((1 << 512) - 1)).to_bytes(64, 'big')
+    """Add two 512-bit little-endian integers modulo 2^512."""
+    x = int.from_bytes(a, "little") + int.from_bytes(b, "little")
+    return (x & ((1 << 512) - 1)).to_bytes(64, "little")
 
 
 def S(x: bytes) -> bytes:
@@ -77,21 +78,17 @@ def P(x: bytes) -> bytes:
     return bytes(x[TAU[i]] for i in range(64))
 
 
-def l_word(w: int) -> int:
-    # w — 64-битное слово (int)
-    # умножение на матрицу A (GF(2)): XOR строк, где биты w == 1
-    out = 0
-    for i in range(64):
-        if (w >> (63 - i)) & 1:
-            out ^= A_ROWS[i]  # каждая строка — 64-битное число
-    return out
-
-
 def L(x: bytes) -> bytes:
-    # x = a7||...||a0, где каждая ai — 8 байт
-    words = [int.from_bytes(x[i * 8:(i + 1) * 8], 'big') for i in range(8)]
-    words = [l_word(w) for w in words]
-    return b''.join(w.to_bytes(8, 'big') for w in words)
+    result = bytearray(64)
+    for i in range(8):
+        t = 0
+        for j in range(8):
+            byte = x[i * 8 + j]
+            for k in range(8):
+                if byte & (1 << (7 - k)):
+                    t ^= A_ROWS[j * 8 + k]
+        result[i * 8:(i + 1) * 8] = t.to_bytes(8, "big")
+    return bytes(result)
 
 
 def LPS(x: bytes) -> bytes:
@@ -126,37 +123,40 @@ def g_N(h: bytes, N: bytes, m: bytes) -> bytes:
 
 
 def streebog512(msg: bytes) -> bytes:
-    h = bytes(64)      # IV = 0^512
+    """Compute the 512-bit Streebog (GOST R 34.11-2012) hash."""
+
+    h = bytes(64)  # IV = 0^512
     N = bytes(64)
     Sigma = bytes(64)
 
-    # Обработка полных блоков СПРАВА НАЛЕВО
-    length = len(msg)
-    while length >= 64:
-        m = msg[length - 64:length]
+    # Process full 512-bit blocks from left to right
+    offset = 0
+    while offset + 64 <= len(msg):
+        m = msg[offset:offset + 64]
         h = g_N(h, N, m)
-        N = add512(N, (512).to_bytes(64, 'big'))
+        N = add512(N, (512).to_bytes(64, "little"))
         Sigma = add512(Sigma, m)
-        length -= 64
+        offset += 64
 
-    # Остаток (менее 512 бит) — это теперь префикс msg[:length]
-    tail = msg[:length]
+    # Tail (less than 512 bits)
+    tail = msg[offset:]
 
-    # Формируем последний блок m: 0^(...) || 1 || tail (битовый паддинг в байтовом виде)
+    # Form final block: 0^(...) || 1 || tail
     m = bytearray(64)
     m[64 - len(tail):] = tail
     m[64 - len(tail) - 1] = 0x01
     m = bytes(m)
 
-    # Обработка последнего блока
+    # Process last block
     h = g_N(h, N, m)
-    N = add512(N, (len(tail) * 8).to_bytes(64, 'big'))
+    N = add512(N, (len(tail) * 8).to_bytes(64, "little"))
 
-    # Σ += M_q (без паддинга "1", только реальные биты хвоста)
+    # Σ += tail (without padding bit)
     block_tail = bytearray(64)
     block_tail[64 - len(tail):] = tail
     Sigma = add512(Sigma, bytes(block_tail))
 
+    # Finalization
     h = g_N(h, bytes(64), N)
     h = g_N(h, bytes(64), Sigma)
     return h
