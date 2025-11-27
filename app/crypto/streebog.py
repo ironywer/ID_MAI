@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 MASK64 = 0xFFFFFFFFFFFFFFFF
 BLOCK_SIZE = 64
 
+# Константы раундов ГОСТ Р 34.11-2012
 ROUND_CONSTANTS = [
     [0x0745A6F2596580DD, 0x234D74CC36747605, 0x15D360A4082A42A2, 0x0169679291E07C4B, 0xFCC485758DB84E71, 0x16D0452E43766A2F, 0x1F7C65C0812FCBEB, 0xE9DACA1EDA5B08B1],
     [0xB79BB121700479E6, 0x56CDCBD71BA2DD55, 0xCAA70ADBC261B55C, 0x5899D6126B17B59A, 0x3101B5160F5ED561, 0x982B230A72EAFEF3, 0xD7B5700F469DE34F, 0x1A2F9DA98AB5A36F],
@@ -34,12 +35,14 @@ IV256 = bytes([1] * BLOCK_SIZE)
 
 
 def _bytes_to_uints(block: bytes) -> List[int]:
+    # Делит блок из 64 байт на 8 чисел uint64
     if len(block) != BLOCK_SIZE:
         raise ValueError(f"Expected {BLOCK_SIZE} bytes, got {len(block)}")
     return [int.from_bytes(block[i * 8 : (i + 1) * 8], "big") for i in range(8)]
 
 
 def _uints_to_bytes(words: Iterable[int]) -> bytes:
+    # Собирает 8 чисел uint64 обратно в 64 байта
     vals = list(words)
     if len(vals) != 8:
         raise ValueError(f"Expected 8 uint64 values, got {len(vals)}")
@@ -47,6 +50,7 @@ def _uints_to_bytes(words: Iterable[int]) -> bytes:
 
 
 def _pad_block(data: bytes) -> bytes:
+    # Дополняет последний блок байтом 0x01 и нулями
     if len(data) > BLOCK_SIZE:
         raise ValueError("Cannot pad data longer than one block")
     padded = bytearray(BLOCK_SIZE)
@@ -57,6 +61,7 @@ def _pad_block(data: bytes) -> bytes:
 
 
 def _reverse_words(words: Iterable[int]) -> List[int]:
+    # Переворачивает порядок слов, как требует стандарт
     raw = bytearray(BLOCK_SIZE)
     for i, val in enumerate(words):
         raw[i * 8 : (i + 1) * 8] = (val & MASK64).to_bytes(8, "big")
@@ -65,6 +70,7 @@ def _reverse_words(words: Iterable[int]) -> List[int]:
 
 
 def _add512(lhs: Iterable[int], rhs: Iterable[int]) -> List[int]:
+    # Сложение двух 512-битных чисел с переносом
     a = _reverse_words(lhs)
     b = _reverse_words(rhs)
     res = [0] * 8
@@ -77,11 +83,13 @@ def _add512(lhs: Iterable[int], rhs: Iterable[int]) -> List[int]:
 
 
 def _xor_in_place(dst: List[int], src: Iterable[int]) -> None:
+    # Побитовое XOR по словам
     for i, v in enumerate(src):
         dst[i] = (dst[i] ^ v) & MASK64
 
 
 def _s_transform(state: List[int]) -> None:
+    # Замена байтов через S-box
     for i, val in enumerate(state):
         tmp = val
         for _ in range(8):
@@ -92,6 +100,7 @@ def _s_transform(state: List[int]) -> None:
 
 
 def _p_transform(state: List[int]) -> None:
+    # Перестановка байтов (P-преобразование)
     as_bytes = bytearray(BLOCK_SIZE)
     for i, v in enumerate(state):
         as_bytes[i * 8 : (i + 1) * 8] = (v & MASK64).to_bytes(8, "big")
@@ -103,6 +112,7 @@ def _p_transform(state: List[int]) -> None:
 
 
 def _l_transform(state: List[int]) -> None:
+    # Линейное L-преобразование по таблице
     for i, v in enumerate(state):
         state[i] = (
             LINEAR_LOOKUP[7][(v >> 56) & 0xFF]
@@ -117,6 +127,7 @@ def _l_transform(state: List[int]) -> None:
 
 
 def _xspl(buffer: List[int], constant: Iterable[int]) -> None:
+    # Комбинированное XOR -> S -> P -> L
     _xor_in_place(buffer, constant)
     _s_transform(buffer)
     _p_transform(buffer)
@@ -124,6 +135,7 @@ def _xspl(buffer: List[int], constant: Iterable[int]) -> None:
 
 
 def _g(h: List[int], m: List[int], n: List[int]) -> None:
+    # Основная компрессионная функция G
     h_temp = h.copy()
     _xspl(h, n)
     k = h.copy()
@@ -153,6 +165,7 @@ class Streebog:
         self.reset()
 
     def reset(self) -> None:
+        # Сбрасывает внутреннее состояние к начальному IV
         self.h = _bytes_to_uints(IV256 if self.digest_size == 32 else IV512)
         self.n = [0] * 8
         self.sigma = [0] * 8
@@ -165,6 +178,7 @@ class Streebog:
         logger.info("Streebog update: data_len=%d, buffer_len_before=%d", len(data), len(self.buffer))
         view = memoryview(data)
         idx = 0
+        # Кормим данные кусками по 64 байта и обрабатываем полные блоки
         while idx < len(view):
             to_take = min(BLOCK_SIZE - len(self.buffer), len(view) - idx)
             self.buffer.extend(view[idx : idx + to_take])
@@ -179,6 +193,7 @@ class Streebog:
         return self
 
     def _finalize(self) -> bytes:
+        # Завершение: паддинг, учёт длины и суммы, финальные вызовы G
         padded = _pad_block(self.buffer)
         m = _bytes_to_uints(padded)
 
@@ -213,6 +228,7 @@ class Streebog:
         return self.digest().hex()
 
     def copy(self) -> "Streebog":
+        # Делает независимую копию текущего состояния
         clone = Streebog(self.digest_size)
         clone.h = self.h.copy()
         clone.n = self.n.copy()
