@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Iterable, List
+import logging
 
 from app.crypto.constants.streebog_tables import DIRECT_SBOX, LINEAR_LOOKUP
 
+
+logger = logging.getLogger(__name__)
 
 MASK64 = 0xFFFFFFFFFFFFFFFF
 BLOCK_SIZE = 64
@@ -146,6 +149,7 @@ class Streebog:
     def __post_init__(self) -> None:
         if self.digest_size not in (32, 64):
             raise ValueError("digest_size must be either 32 or 64 bytes")
+        logger.info("Initialized Streebog: digest_size=%d", self.digest_size)
         self.reset()
 
     def reset(self) -> None:
@@ -153,10 +157,12 @@ class Streebog:
         self.n = [0] * 8
         self.sigma = [0] * 8
         self.buffer = bytearray()
+        logger.info("Streebog state reset: digest_size=%d", self.digest_size)
 
     def update(self, data: bytes) -> "Streebog":
         if not data:
             return self
+        logger.info("Streebog update: data_len=%d, buffer_len_before=%d", len(data), len(self.buffer))
         view = memoryview(data)
         idx = 0
         while idx < len(view):
@@ -169,6 +175,7 @@ class Streebog:
                 _g(self.h, block_words, self.n)
                 self.n = _add512(self.n, V512)
                 self.sigma = _add512(self.sigma, block_words)
+        logger.info("Streebog update complete: buffer_len_after=%d", len(self.buffer))
         return self
 
     def _finalize(self) -> bytes:
@@ -178,6 +185,11 @@ class Streebog:
         h_out = self.h.copy()
         n_out = self.n.copy()
         sigma_out = self.sigma.copy()
+        logger.info(
+            "Finalizing Streebog: pending_len=%d, digest_size=%d",
+            len(self.buffer),
+            self.digest_size,
+        )
 
         _g(h_out, m, n_out)
 
@@ -193,7 +205,9 @@ class Streebog:
         return out[32:] if self.digest_size == 32 else out
 
     def digest(self) -> bytes:
-        return self._finalize()
+        out = self._finalize()
+        logger.info("Streebog digest computed: size=%d bytes", len(out))
+        return out
 
     def hexdigest(self) -> str:
         return self.digest().hex()

@@ -1,4 +1,7 @@
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
 
 PI: List[int] = [
     252, 238, 221, 17, 207, 110, 49, 22, 251, 196, 250,
@@ -146,12 +149,14 @@ def F(k1: bytes, k2: bytes, c: bytes) -> tuple[bytes, bytes]:
 
 def expand_keys(master: bytes) -> list[bytes]:
     assert len(master) == 32
+    logger.info("Expanding Kuznechik keys: master_len=%d bytes", len(master))
     k1, k2 = master[:16], master[16:]
     round_keys = [k1, k2]  # K0, K1
     for j in range(4):     # 4 группы по 8 итераций = 32 итерации
         for i in range(1, 9):
             k1, k2 = F(k1, k2, C_i(8*j + i))
         round_keys.extend([k1, k2])
+    logger.info("Round keys ready: total=%d", len(round_keys[:10]))
     return round_keys[:10]
 
 def inc_ctr(c: bytearray):
@@ -161,6 +166,12 @@ def inc_ctr(c: bytearray):
             break
 
 def kuz_ctr_encrypt(key256: bytes, iv16: bytes, data: bytes) -> bytes:
+    logger.info(
+        "Kuznechik CTR encrypt: data_len=%d, key_len=%d, iv_len=%d",
+        len(data),
+        len(key256),
+        len(iv16),
+    )
     rk = expand_keys(key256)
     ctr = bytearray(iv16)
     out = bytearray(len(data))
@@ -172,6 +183,7 @@ def kuz_ctr_encrypt(key256: bytes, iv16: bytes, data: bytes) -> bytes:
             out[off+i] = data[off+i] ^ keystream[i]
         off += n
         inc_ctr(ctr)
+    logger.info("Kuznechik CTR encrypt done: out_len=%d", len(out))
     return bytes(out)
 
 kuz_ctr_decrypt = kuz_ctr_encrypt

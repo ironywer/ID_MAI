@@ -1,5 +1,12 @@
 import binascii as ba
+import logging
 from app.crypto.streebog import new
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 
 def test_streebog_empty():

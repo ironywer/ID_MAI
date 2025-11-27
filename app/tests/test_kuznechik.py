@@ -1,4 +1,11 @@
+import logging
 from app.crypto.kuz import expand_keys, encrypt_block, decrypt_block
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 
 def test_kuznechik_block():
