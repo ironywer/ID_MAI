@@ -1,38 +1,46 @@
 {% extends "base.html" %}
-{% block title %}RSA — Шифрование{% endblock %}
+{% block title %}Crypto tools{% endblock %}
 {% block content %}
-<h2>Шифрование</h2>
+<h2>Crypto playground</h2>
 
-<form method="post" action="/encrypt">
-  <label>Метод:
+<form method="post" action="/encrypt" class="stack">
+  <label>Method:
     <select name="method" required>
-      <option value="rsa" selected>RSA</option>
+      <option value="rsa" selected>RSA (encrypt)</option>
+      <option value="kuznechik">Kuznechik (encrypt)</option>
+      <option value="streebog">Streebog (hash)</option>
     </select>
-  </label><br>
+  </label>
 
-  <label>Текст:</label><br>
-  <textarea name="text" rows="5" cols="60" required></textarea><br>
+  <label>Input text:</label>
+  <textarea name="text" rows="5" cols="60" required></textarea>
 
-  <button type="submit">Зашифровать</button>
+  <button type="submit" class="button">Run</button>
 </form>
 
 {% if result %}
   <hr>
   {% if result.error %}
-    <p style="color:#b00020"><b>Ошибка:</b> {{result.error}}</p>
-  {% elif result.encrypted_hex %}
-    <p><b>Шифртекст (hex):</b></p>
+    <p class="error"><b>Error:</b> {{result.error}}</p>
+  {% elif result.method == "rsa" %}
+    <p><b>Encrypted (hex):</b></p>
     <pre style="white-space:pre-wrap;word-break:break-all;">{{result.encrypted_hex}}</pre>
-  {% endif %}
-  {% if result.public_key %}
-  <h3>Публичный ключ</h3>
-  <pre style="white-space:pre-wrap;word-break:break-all;"><b>n:</b> {{ result.public_key.n }}</pre>
-  <p><b>e:</b> {{ result.public_key.e }}</p>
+    <h3>Public key</h3>
+    <pre style="white-space:pre-wrap;word-break:break-all;"><b>n:</b> {{ result.public_key.n }}</pre>
+    <p><b>e:</b> {{ result.public_key.e }}</p>
+  {% elif result.method == "kuznechik" %}
+    <h3>Kuznechik ciphertext</h3>
+    <pre style="white-space:pre-wrap;word-break:break-all;">{{ result.kuznechik.cipher_hex }}</pre>
+    <p class="small muted">Key (hex): {{ result.kuznechik.key_hex }}</p>
+    <p class="small muted">IV (hex): {{ result.kuznechik.iv_hex }}</p>
+  {% elif result.method == "streebog" %}
+    <h3>Streebog hash (512-bit)</h3>
+    <pre style="white-space:pre-wrap;word-break:break-all;">{{ result.streebog }}</pre>
   {% endif %}
   {% if result.pdf_link %}
-      <a href="{{ result.pdf_link }}" download>
-          <button>Скачать PDF</button>
-      </a>
+    <a href="{{ result.pdf_link }}" download>
+        <button>Download PDF</button>
+    </a>
   {% endif %}
 {% endif %}
 {% endblock %}

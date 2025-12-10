@@ -8,10 +8,22 @@
 <body>
 <header class="container">
     <a class="logo" href="/">ID</a>
+    <nav class="nav">
+        {% if request.session.get("user") %}
+        <span class="muted small">Signed in as {{ request.session.get("user") }}</span>
+        {% if request.session.get("role") == "admin" %}
+        <a href="/admin/">Admin</a>
+        {% endif %}
+        <a href="/auth/logout">Logout</a>
+        {% else %}
+        <a href="/auth/login">Login</a>
+        <a href="/auth/register">Register</a>
+        {% endif %}
+    </nav>
 </header>
 <main class="container">
     {% block content %}{% endblock %}
 </main>
-<footer class="container small muted">Каркас</footer>
+<footer class="container small muted">ID Crypto Lab</footer>
 </body>
 </html>

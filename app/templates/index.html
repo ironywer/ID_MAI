@@ -1,7 +1,15 @@
 {% extends "base.html" %}
-{% block title %}ID — главная{% endblock %}
+{% block title %}ID{% endblock %}
 {% block content %}
-<h1>Добро пожаловать в ID</h1>
-<p class="muted">Сервис для шифрования.</p>
-<a href="/encrypt" class="button">RSA</a>
+<h1>Welcome to ID crypto tools</h1>
+<p class="muted">Use our crypto playground to try algorithms and keep your data safe.</p>
+{% if request.session.get("user") %}
+<p class="small">Signed in as <strong>{{ request.session.get("user") }}</strong>.</p>
+{% else %}
+<p class="small">Sign in to access protected pages.</p>
+{% endif %}
+<a href="/encrypt" class="button">Open crypto tools</a>
+{% if request.session.get("role") == "admin" %}
+<a href="/admin/" class="button" style="margin-left:8px;">Admin panel</a>
+{% endif %}
 {% endblock %}
