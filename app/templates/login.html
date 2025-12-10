@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<h2>Login</h2>
+<div class="stack" style="gap:24px; max-width:420px;">
+    <form method="post" action="/auth/login" class="stack">
+        <label>
+            Username or Email
+            <input name="login" type="text" required>
+        </label>
+        <label>
+            Password
+            <input name="password" type="password" required>
+        </label>
+        <button type="submit" class="button">Sign in with password</button>
+    </form>
+
+    <form method="post" action="/auth/request_code" class="stack">
+        <label>
+            Username or Email
+            <input name="login" type="text" required>
+        </label>
+        <button type="submit" class="button">Send login code to email</button>
+        <p class="muted small">Code will be written to <code>app/data/email_outbox.txt</code> in this demo.</p>
+    </form>
+</div>
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+<p class="muted small">No account? <a href="/auth/register">Create one</a>.</p>
+{% endblock %}

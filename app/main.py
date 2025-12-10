@@ -16,6 +16,8 @@ app = FastAPI(title="PriceWatch MVP")
 ALLOWED_PREFIXES = (
     "/auth/login",
     "/auth/register",
+    "/auth/request_code",
+    "/auth/verify",
     "/static",
     "/favicon.ico",
     "/docs",

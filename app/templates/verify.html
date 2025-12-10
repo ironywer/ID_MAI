@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Verify{% endblock %}
+{% block content %}
+<h2>Two-factor verification</h2>
+<p class="muted small">
+We sent a verification code to your email
+{% if request.session.get("pending_email") %} ({{ request.session.get("pending_email") }}){% endif %}.
+Check your mailbox or the local log at <code>app/data/email_outbox.txt</code>.
+</p>
+<form method="post" action="/auth/verify" class="stack">
+    <label>
+        Code
+        <input name="code" type="text" required>
+    </label>
+    <button type="submit" class="button">Verify</button>
+</form>
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+{% endblock %}

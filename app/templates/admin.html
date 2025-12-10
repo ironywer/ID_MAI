@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<h2>Users</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Email</th>
+            <th>Password hash</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u.username }}</td>
+            <td>{{ u.role or "user" }}</td>
+            <td>{{ u.email or "-" }}</td>
+            <td style="word-break:break-all;">{{ u.password }}</td>
+            <td>
+                {% if u.username != request.session.get("user") %}
+                <form method="post" action="/admin/delete" style="margin:0;">
+                    <input type="hidden" name="username" value="{{ u.username }}">
+                    <button type="submit">Delete</button>
+                </form>
+                {% else %}
+                <span class="small muted">You</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
