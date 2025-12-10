@@ -2,30 +2,72 @@
 {% block title %}Login{% endblock %}
 {% block content %}
 <h2>Login</h2>
-<div class="stack" style="gap:24px; max-width:420px;">
-    <form method="post" action="/auth/login" class="stack">
-        <label>
-            Username or Email
-            <input name="login" type="text" required>
-        </label>
-        <label>
-            Password
-            <input name="password" type="password" required>
-        </label>
-        <button type="submit" class="button">Sign in with password</button>
-    </form>
 
-    <form method="post" action="/auth/request_code" class="stack">
-        <label>
-            Username or Email
-            <input name="login" type="text" required>
-        </label>
-        <button type="submit" class="button">Send login code to email</button>
-        <p class="muted small">Code will be written to <code>app/data/email_outbox.txt</code> in this demo.</p>
-    </form>
+<div class="stack" style="gap:12px; max-width:480px;">
+
+  {% set method = request.query_params.get('method') or 'password' %}
+
+  {% if method == 'password' %}
+  <form method="post" action="/auth/login" class="stack">
+      <label>
+          Username or Email
+          <input name="login" type="text" required>
+      </label>
+      <label>
+          Password
+          <input name="password" type="password" required>
+      </label>
+      <button type="submit" class="button primary">Sign in with password</button>
+  </form>
+  {% elif method == 'code' %}
+  <form method="post" action="/auth/request_code" class="stack">
+      <label>
+          Username or Email
+          <input name="login" type="text" required>
+      </label>
+      <button type="submit" class="button primary">Send login code to email</button>
+      <p class="muted small">Code will be written to <code>app/data/email_outbox.txt</code> in this demo.</p>
+  </form>
+  {% elif method == 'totp' %}
+  <form method="post" action="/auth/login_totp" class="stack">
+      <label>
+          Username or Email
+          <input name="login" type="text" required>
+      </label>
+      <label>
+          TOTP code
+          <input name="code" type="text" required>
+      </label>
+      <button type="submit" class="button primary">Sign in with Yandex Key (TOTP)</button>
+      <p class="muted small">Set up at <a href="/auth/totp_setup">/auth/totp_setup</a>.</p>
+  </form>
+  {% elif method == 'yandex' %}
+  <form method="post" action="/auth/login_yandex" class="stack">
+      <label>
+          Yandex API key
+          <input name="token" type="text" required>
+      </label>
+      <button type="submit" class="button primary">Sign in with Yandex key</button>
+      <p class="muted small">Server expects env <code>YANDEX_API_KEY</code>; user/role from <code>YANDEX_USERNAME</code>/<code>YANDEX_ROLE</code>.</p>
+  </form>
+  {% endif %}
 </div>
+
 {% if error %}
 <p class="error">{{ error }}</p>
 {% endif %}
 <p class="muted small">No account? <a href="/auth/register">Create one</a>.</p>
+<div class="method-tabs">
+<form method="get" action="/auth/login">
+  <button type="submit" class="button {% if not request.query_params.get('method') or request.query_params.get('method') == 'password' %}primary{% endif %}">Password</button>
+</form>
+<form method="get" action="/auth/login">
+  <input type="hidden" name="method" value="code">
+  <button type="submit" class="button {% if request.query_params.get('method') == 'code' %}primary{% endif %}">Email code</button>
+</form>
+<form method="get" action="/auth/login">
+  <input type="hidden" name="method" value="totp">
+  <button type="submit" class="button {% if request.query_params.get('method') == 'totp' %}primary{% endif %}">TOTP</button>
+</form>
+</div>
 {% endblock %}

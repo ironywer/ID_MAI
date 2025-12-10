@@ -11,9 +11,13 @@ header.container { display:flex; justify-content: space-between; align-items:cen
 .muted { color: var(--muted); }
 .button, button { background: var(--accent); color:#fff; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; font-weight:600; }
 button:hover, .button:hover { filter: brightness(0.95); }
+.button.primary { background: var(--accent); }
+.button:not(.primary) { background:#e7ecf7; color:#1b3c7a; }
 form.stack { display:flex; flex-direction:column; gap:12px; max-width:400px; }
 input, textarea, select { width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font: inherit; }
 .error { color:#b00020; font-weight:600; }
 .table { width:100%; border-collapse: collapse; margin-top: 12px; }
 .table th, .table td { border:1px solid #eee; padding:8px; text-align:left; }
 .table th { background:#f5f5f5; }
+.method-tabs { display:flex; gap:8px; flex-wrap:wrap; }
+.method-tabs form { margin:0; }

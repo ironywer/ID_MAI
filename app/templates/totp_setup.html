@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}TOTP Setup{% endblock %}
+{% block content %}
+<h2>Yandex Key / TOTP Setup</h2>
+<p class="muted small">Scan in Яндекс.Ключ / Google Authenticator as a TOTP account.</p>
+<div class="stack">
+    {% if qr_url %}
+    <img src="{{ qr_url }}" alt="TOTP QR" style="width:200px;height:200px;border:1px solid #eee;padding:4px;">
+    <p class="muted small">If QR does not load (needs internet), copy the secret below manually.</p>
+    {% endif %}
+    <label>Secret:</label>
+    <pre style="white-space:pre-wrap;word-break:break-all;">{{ secret }}</pre>
+    <label>otpauth URL:</label>
+    <pre style="white-space:pre-wrap;word-break:break-all;">{{ otpauth }}</pre>
+    <p class="muted small">Add this secret to your authenticator. Codes are 6 digits, 30s step.</p>
+</div>
+{% endblock %}

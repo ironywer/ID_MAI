@@ -18,6 +18,7 @@ ALLOWED_PREFIXES = (
     "/auth/register",
     "/auth/request_code",
     "/auth/verify",
+    "/auth/login_yandex",
     "/static",
     "/favicon.ico",
     "/docs",

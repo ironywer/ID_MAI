@@ -9,6 +9,7 @@
             <th>Role</th>
             <th>Email</th>
             <th>Password hash</th>
+            <th>TOTP</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -19,6 +20,7 @@
             <td>{{ u.role or "user" }}</td>
             <td>{{ u.email or "-" }}</td>
             <td style="word-break:break-all;">{{ u.password }}</td>
+            <td>{{ "enabled" if u.totp_secret else "off" }}</td>
             <td>
                 {% if u.username != request.session.get("user") %}
                 <form method="post" action="/admin/delete" style="margin:0;">

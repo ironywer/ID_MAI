@@ -1,11 +1,17 @@
 import os
+import urllib.parse
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette import status
 
-from app.utils.auth import store, hash_password
+from app.utils.auth import (
+    store,
+    hash_password,
+    generate_totp_secret,
+    verify_totp,
+)
 from app.utils.emailer import send_email
 
 
@@ -13,6 +19,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 templates = Jinja2Templates(directory="app/templates")
 
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+YANDEX_USERNAME = os.environ.get("YANDEX_USERNAME", "yandex_user")
+YANDEX_ROLE = os.environ.get("YANDEX_ROLE", "user")
+YANDEX_API_KEY = os.environ.get("YANDEX_API_KEY")  # expected API key/token from Yandex
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -85,6 +94,72 @@ async def request_code(
     request.session["pending_code"] = code
     request.session["pending_email"] = entry.get("email") or "unknown@example.com"
     return RedirectResponse(url="/auth/verify", status_code=status.HTTP_302_FOUND)
+
+
+@router.post("/login_yandex", response_class=HTMLResponse)
+async def login_yandex(
+    request: Request,
+    token: str = Form(...),
+):
+    if not YANDEX_API_KEY:
+        return templates.TemplateResponse(
+            "login.html",
+            {
+                "request": request,
+                "error": "Yandex login is not configured on server.",
+            },
+        )
+    if token.strip() != YANDEX_API_KEY:
+        return templates.TemplateResponse(
+            "login.html",
+            {
+                "request": request,
+                "error": "Invalid Yandex key.",
+            },
+        )
+
+    request.session["user"] = YANDEX_USERNAME
+    request.session["role"] = YANDEX_ROLE
+    request.session.pop("pending_user", None)
+    request.session.pop("pending_role", None)
+    request.session.pop("pending_code", None)
+    request.session.pop("pending_email", None)
+    return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+
+
+@router.post("/login_totp", response_class=HTMLResponse)
+async def login_totp(
+    request: Request,
+    login: str = Form(...),
+    code: str = Form(...),
+):
+    identifier = login.strip()
+    if not identifier or not code:
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "Provide username/email and code."},
+        )
+
+    entry = store.get_user(identifier) or store.get_user_by_email(identifier)
+    if not entry or not entry.get("totp_secret"):
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "TOTP not configured for this user."},
+        )
+
+    if not verify_totp(entry.get("totp_secret"), code.strip()):
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "Invalid TOTP code."},
+        )
+
+    request.session["user"] = entry.get("username", identifier)
+    request.session["role"] = entry.get("role", "user")
+    request.session.pop("pending_user", None)
+    request.session.pop("pending_role", None)
+    request.session.pop("pending_code", None)
+    request.session.pop("pending_email", None)
+    return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
 
 
 @router.get("/register", response_class=HTMLResponse)
@@ -170,3 +245,24 @@ async def verify_action(request: Request, code: str = Form(...)):
     request.session.pop("pending_email", None)
 
     return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+
+
+@router.get("/totp_setup", response_class=HTMLResponse)
+async def totp_setup_page(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse(url="/auth/login", status_code=status.HTTP_302_FOUND)
+    username = request.session.get("user")
+    existing = store.get_totp_secret(username)
+    secret = existing or generate_totp_secret()
+    if not existing:
+        store.set_totp_secret(username, secret)
+    issuer = "ID"
+    otpauth = f"otpauth://totp/{issuer}:{username}?secret={secret}&issuer={issuer}"
+    qr_url = (
+        "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data="
+        + urllib.parse.quote(otpauth)
+    )
+    return templates.TemplateResponse(
+        "totp_setup.html",
+        {"request": request, "secret": secret, "otpauth": otpauth, "qr_url": qr_url},
+    )
